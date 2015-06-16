@@ -1,7 +1,7 @@
 __author__ = 'mstacy'
 from django.conf.urls import patterns, url
 from django.contrib import admin
-from queue.views import Run, Queue, UserTasks, UserResult
+from queue.views import Run, Queue, UserTasks, UserResult,FileUploadView
 from rest_framework.urlpatterns import format_suffix_patterns
 
 # q = QueueTask()
@@ -17,6 +17,8 @@ urlpatterns = patterns('',
                        #url(r'run/', include(tasks_url)),
                        #url(r'run/$',Run.as_view(),name='run-main'),
                        url(r'run/(?P<task_name>[-\w .]+)/$', Run.as_view(), name='run-main'),
+		       #url(r'file-upload/$', FileUploadView.as_view(), name='file-upload'),
+		       url(r'file-upload/(?P<filename>[-\w.]+)', FileUploadView.as_view(), name='file-upload'),
                        url(r'task/(?P<task_id>[-\w]+)/$', UserResult.as_view(), name='queue-task-result'),
                        url(r'usertasks/$', UserTasks.as_view(), name='queue-user-tasks'),
                        url(r'^$', Queue.as_view(), name="queue-main"),

@@ -2,16 +2,19 @@
 from rest_framework.settings import api_settings
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
-from rest_framework.permissions import IsAuthenticatedOrReadOnly,DjangoModelPermissionsOrAnonReadOnly
+from rest_framework.permissions import IsAuthenticatedOrReadOnly,DjangoModelPermissionsOrAnonReadOnly,AllowAny
 from rest_framework.views import APIView
 from ccelery.q import QueueTask, list_tasks, task_docstring
 from models import Run_model
 from rest_framework.renderers import JSONRenderer, JSONPRenderer
 from renderer import QueueRunBrowsableAPIRenderer
-from rest_framework.parsers import JSONParser
+from rest_framework.parsers import JSONParser,MultiPartParser,FormParser,FileUploadParser
 from util import trim
 from rest_framework.authtoken.models import Token
 #task = list_tasks()['available_tasks']
+#from rest_framework.viewsets import ModelViewSet
+#from serializer import FileUploadSerializer
+import os
 
 q = QueueTask()
 
@@ -40,7 +43,7 @@ class Queue(APIView):
 class Run(APIView):
     permission_classes = (DjangoModelPermissionsOrAnonReadOnly,)
     model = Run_model
-    parser_classes = (JSONParser,)
+    parser_classes = (JSONParser,MultiPartParser,FormParser)
     renderer_classes = (QueueRunBrowsableAPIRenderer, JSONRenderer, JSONPRenderer,)
 
     def __init__(self,q=q, *args, **kwargs):
@@ -85,6 +88,41 @@ class Run(APIView):
         result['result_url']=reverse('queue-task-result', kwargs={'task_id':result['task_id']}, request=request)
         return Response(result)
 
+class FileUploadView(APIView):
+
+    permission_classes =(AllowAny,)
+    #parser_classes = (MultiPartParser, FormParser,)
+    parser_classes = (FileUploadParser,)
+    renderer_classes = (JSONRenderer,)
+    def get_username(self, request):
+        username = "guest"
+        if request.user.is_authenticated():
+            username = request.user.username
+        return username
+
+    def post(self, request,filename, format=None):
+    	resultDir = os.path.join("/data/tmp", self.get_username(request))
+	try:
+    	    os.makedirs(resultDir)
+	except:
+	    pass
+	for key,value in request.FILES.items():
+		print key,value
+        my_file = request.FILES['file'] #.get('filename',None)
+	
+	with open("%s/%s" % (resultDir,filename), 'wb+') as temp_file:
+	    for chunk in my_file.chunks():
+		temp_file.write(chunk)
+        return Response({"file":"%s/%s" % (resultDir,filename)})
+
+#class FileUploadViewSet(ModelViewSet):
+#    permission_classes =(IsAuthenticatedOrReadOnly,)    
+#    queryset = FileUpload.objects.all()
+#    serializer_class = FileUploadSerializer
+#    parser_classes = (MultiPartParser, FormParser,)
+
+#    def perform_create(self, serializer):
+#	serializer.save(owner=self.request.user, datafile=self.request.data.get('datafile'))
 
 class UserResult(APIView):
     permission_classes = (DjangoModelPermissionsOrAnonReadOnly,)
