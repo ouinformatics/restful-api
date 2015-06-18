@@ -91,8 +91,8 @@ class Run(APIView):
 class FileUploadView(APIView):
 
     permission_classes =(AllowAny,)
-    #parser_classes = (MultiPartParser, FormParser,)
-    parser_classes = (FileUploadParser,)
+    parser_classes = (MultiPartParser, FormParser,)
+    #parser_classes = (FileUploadParser,)
     renderer_classes = (JSONRenderer,)
     def get_username(self, request):
         username = "guest"
@@ -100,20 +100,27 @@ class FileUploadView(APIView):
             username = request.user.username
         return username
 
-    def post(self, request,filename, format=None):
+    def post(self, request, format=None):
     	resultDir = os.path.join("/data/tmp", self.get_username(request))
 	try:
     	    os.makedirs(resultDir)
 	except:
 	    pass
-	for key,value in request.FILES.items():
-		print key,value
-        my_file = request.FILES['file'] #.get('filename',None)
+	result={}
+	for key,value in request.FILES.iteritems():
+	    filename= value.name
+	    local_file = "%s/%s" % (resultDir,filename)
+	    with open(local_file, 'wb+') as temp_file:
+	        for chunk in value.chunks():
+		    temp_file.write(value)
+	    result[key]=local_file
+	return Response(result)		
+        #my_file = request.FILES['file'] #.get('filename',None)
 	
-	with open("%s/%s" % (resultDir,filename), 'wb+') as temp_file:
-	    for chunk in my_file.chunks():
-		temp_file.write(chunk)
-        return Response({"file":"%s/%s" % (resultDir,filename)})
+	#with open("%s/%s" % (resultDir,filename), 'wb+') as temp_file:
+	#    for chunk in my_file.chunks():
+	#	temp_file.write(chunk)
+        #return Response({"file":"%s/%s" % (resultDir,filename)})
 
 #class FileUploadViewSet(ModelViewSet):
 #    permission_classes =(IsAuthenticatedOrReadOnly,)    
