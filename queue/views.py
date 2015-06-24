@@ -11,6 +11,8 @@ from renderer import QueueRunBrowsableAPIRenderer
 from rest_framework.parsers import JSONParser,MultiPartParser,FormParser,FileUploadParser
 from util import trim
 from rest_framework.authtoken.models import Token
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
 #task = list_tasks()['available_tasks']
 #from rest_framework.viewsets import ModelViewSet
 #from serializer import FileUploadSerializer
@@ -94,6 +96,11 @@ class FileUploadView(APIView):
     parser_classes = (MultiPartParser, FormParser,)
     #parser_classes = (FileUploadParser,)
     renderer_classes = (JSONRenderer,)
+
+    @method_decorator(csrf_exempt)
+    def dispatch(self, request, *args, **kwargs):
+        return super(FileUploadView, self).dispatch(request, *args, **kwargs)
+    
     def get_username(self, request):
         username = "guest"
         if request.user.is_authenticated():
@@ -110,11 +117,20 @@ class FileUploadView(APIView):
 	for key,value in request.FILES.iteritems():
 	    filename= value.name
 	    local_file = "%s/%s" % (resultDir,filename)
-	    with open(local_file, 'wb+') as temp_file:
-	        for chunk in value.chunks():
-		    temp_file.write(value)
+	    self.handle_file_upload(request.FILES[key],local_file)
+	    #with open(local_file, 'wb+') as temp_file:
+	    #    for chunk in value.chunks():
+	    #	    temp_file.write(value)
 	    result[key]=local_file
 	return Response(result)		
+    def handle_file_upload(self,f,filename):
+	if f.multiple_chunks():
+	    with open(filename, 'wb+') as temp_file:
+                for chunk in f.chunks():
+                    temp_file.write(chunk)
+	else:
+	    with open(filename, 'wb+') as temp_file:
+	        temp_file.write(f.read())
         #my_file = request.FILES['file'] #.get('filename',None)
 	
 	#with open("%s/%s" % (resultDir,filename), 'wb+') as temp_file:
