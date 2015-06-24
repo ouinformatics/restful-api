@@ -118,9 +118,6 @@ class FileUploadView(APIView):
 	    filename= value.name
 	    local_file = "%s/%s" % (resultDir,filename)
 	    self.handle_file_upload(request.FILES[key],local_file)
-	    #with open(local_file, 'wb+') as temp_file:
-	    #    for chunk in value.chunks():
-	    #	    temp_file.write(value)
 	    result[key]=local_file
 	return Response(result)		
     def handle_file_upload(self,f,filename):
@@ -131,21 +128,6 @@ class FileUploadView(APIView):
 	else:
 	    with open(filename, 'wb+') as temp_file:
 	        temp_file.write(f.read())
-        #my_file = request.FILES['file'] #.get('filename',None)
-	
-	#with open("%s/%s" % (resultDir,filename), 'wb+') as temp_file:
-	#    for chunk in my_file.chunks():
-	#	temp_file.write(chunk)
-        #return Response({"file":"%s/%s" % (resultDir,filename)})
-
-#class FileUploadViewSet(ModelViewSet):
-#    permission_classes =(IsAuthenticatedOrReadOnly,)    
-#    queryset = FileUpload.objects.all()
-#    serializer_class = FileUploadSerializer
-#    parser_classes = (MultiPartParser, FormParser,)
-
-#    def perform_create(self, serializer):
-#	serializer.save(owner=self.request.user, datafile=self.request.data.get('datafile'))
 
 class UserResult(APIView):
     permission_classes = (DjangoModelPermissionsOrAnonReadOnly,)
@@ -198,51 +180,4 @@ class UserTasks(APIView):
         task_name = request.GET.get('taskname', None)
         username = self.get_username(request)
         data = self.q.history(username, task_name=task_name, page=page, limit=limit,request=request)
-        #for item in data:
-
-
-        # data['next']= reverse('queue-user-tasks',kwargs={'page':page+1,},request=request)
-        # if isinstance(data,ObjectId):
-        # return str(obj)
-        #print data
-        return Response(data)  #,indent=4,sort_keys=True))
-
-
-"""
-  # print task_docstring(task_name)
-        html ="<div class='div_help'><b>Task Name: %s<br>Task Docstring:</b><code>%s</code>Example Curl:<br>%s</div>"
-        baseHelp =""curl --data-ascii '{ "function": "%s",
-         "queue": "%s",
-          "args": [],
-          "kwargs": {}
-          }' %s -H Content-Type:application/json"" % (task_name,"celery",reverse("%s-run" % (task_name), request=request))
-        html = html % (task_name,task_docstring(task_name),baseHelp)
-        #html = html % (task_name,markdown.markdown(trim(task_docstring(task_name))),baseHelp)
-        return Response(html) #, template_name='rest_framework/queue_run_api.html')
-
-
-
-from json import JSONEncoder
-from bson.objectid import ObjectId
-
-class MongoEncoder(JSONEncoder):
-    def default(self, obj, **kwargs):
-        if isinstance(obj, ObjectId):
-            return str(obj)
-        else:
-            return JSONEncoder.default(obj, **kwargs)
-
-
-    from rest_framework.renderers import JSONRenderer, JSONPRenderer
-from rest_framework import renderers
-import json
-
-class PlainTextRenderer(renderers.BaseRenderer):
-    media_type = 'text/plain'
-    format = 'txt'
-
-    def render(self, data, media_type=None, renderer_context=None):
-        return data.encode(self.charset)
-
-
-"""
+        return Response(data) 
