@@ -84,7 +84,8 @@ INSTALLED_APPS = (
     'rest_framework.authtoken',
     'queue',
     'catalog',
-    'data_store'
+    'data_store',
+    'mgmic'
 
 )
 
