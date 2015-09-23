@@ -22,6 +22,8 @@ TEMPLATE_CONTEXT_PROCESSORS = global_settings.TEMPLATE_CONTEXT_PROCESSORS + (
     "api.processor.title",
 )
 
+#DOCKER_HOST_DATA_DIRECTORY when host machine runs need to know if different then /data
+DOCKER_HOST_DATA_DIRECTORY= config.DOCKER_HOST_DATA_DIRECTORY
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = config.SECRET_KEY
 

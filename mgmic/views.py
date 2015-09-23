@@ -16,34 +16,77 @@ from rest_framework.parsers import JSONParser,MultiPartParser,FormParser,FileUpl
 #task = list_tasks()['available_tasks']
 #from rest_framework.viewsets import ModelViewSet
 #from serializer import FileUploadSerializer
-import os
+import os,glob,shutil,httplib
 from dockertask import docker_task
-rom subprocess import Popen, PIPE
-class CheckMapFile(APIView):
-    permission_classes = ( IsAuthenticatedOrReadOnly,)
+from subprocess import Popen, PIPE, call
+from django.conf import settings
+from urlparse import urlparse
+import requests
 
+class CheckMapFile(APIView):
+    permission_classes = ( AllowAny,)
+    renderer_classes = (JSONRenderer,)
     def __init__(self, *args, **kwargs):
         self.docker_cmd = "validate_mapping_file.py -m %s -o %s "
-        self.docker_opts = "-v /data:/data"
+        temp = getattr(settings,"DOCKER_HOST_DATA_DIRECTORY", "/data")
+        self.docker_opts = "-v %s:/data" % (temp)
         self.docker_container = "qiime_env"
-        
         super(CheckMapFile, self).__init__(*args, **kwargs)
 
-    def post(self, request,filename=None,format=None):
+    def get_username(self, request):
+        username = "guest"
+        if request.user.is_authenticated():
+            username = request.user.username
+        return username
+
+    def post(self, request,format=None):
+        filename =request.POST.get('filename',None)
         if filename:
-            p = Popen(['md5sum', filename], stdin=PIPE, stdout=PIPE, stderr=PIPE)
-            output, err = p.communicate()
-            resultDir = os.path.join("/data/tmp", output.split()[0])
-            os.makedirs(resultDir)
+            if os.path.isfile(filename):
+                p = Popen(['md5sum', filename], stdin=PIPE, stdout=PIPE, stderr=PIPE)
+                output, err = p.communicate()
+                resultDir = os.path.join("/data/tmp", self.get_username(request),output.split()[0])
+                #pass
+            else:
+                if not check_url_exist(filename):
+                    raise Exception("Please Check URL or Local File Path(local files must be in /data directory) %s" % filename)
+                resultDir = os.path.join("/data/tmp", self.get_username(request))
+                map_read = os.path.join(resultDir,filename.split('/')[-1])
+                logfile= open(resultDir + "/logfile.txt","w")
+                call(['wget','-O',map_read,filename],stdout=logfile,stderr=logfile)
+                logfile.close()
+                p = Popen(['md5sum', map_read], stdin=PIPE, stdout=PIPE, stderr=PIPE)
+                output, err = p.communicate()
+                resultDir = os.path.join("/data/tmp", self.get_username(request),output.split()[0])
+                filename=map_read
+            try:
+                os.makedirs(resultDir)
+            except:
+                shutil.rmtree(resultDir)
+                os.makedirs(resultDir)
         else:
-            raise('Please provide map file filename')
+            raise Exception('Please provide map file filename')
         docker_cmd = self.docker_cmd % (filename,resultDir)
         result = docker_task(docker_name=self.docker_container,docker_opts=self.docker_opts,docker_command=docker_cmd,id=output.split()[0])
+        logfile= glob.glob(resultDir + '/*.log')
+        status = ""
+        with open(logfile[0]) as f:
+            data = f.read()
+            if "No errors" in data:
+                status="SUCCESS"
+            else:
+                status="FAILURE"
         return Response({
-            'MapFile': filename,
-            'resultDir': resultDir 
+            'status':status,
+            'log': data,
+            'local-file': filename 
         })
 
+def check_url_exist(url):
+    p = urlparse(url)
+    c = httplib.HTTPConnection(p.netloc)
+    c.request("HEAD", p.path)
+    return c.getresponse().status < 400
 # Create your views here.
 """
 class FileUploadView(APIView):

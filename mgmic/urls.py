@@ -3,7 +3,7 @@ from django.conf.urls import patterns, url
 from django.contrib import admin
 #from queue.views import Run, Queue, UserTasks, UserResult,FileUploadView
 from rest_framework.urlpatterns import format_suffix_patterns
-from mgmic.views import CheckMapFile
+from views import CheckMapFile
 # q = QueueTask()
 #tasks_url = []
 
